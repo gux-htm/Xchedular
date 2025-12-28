@@ -1,7 +1,8 @@
+
 const express = require('express');
 const router = express.Router();
 const studentController = require('../controllers/studentController');
-const { auth, isAdmin } = require('../middleware/auth');
+const { auth, isAdmin, isInstructor } = require('../middleware/auth');
 
 // Public routes for registration (no auth required)
 router.post('/register', studentController.registerStudent);
@@ -19,5 +20,8 @@ router.get('/roll/:roll_number/timetable', studentController.getStudentTimetable
 router.get('/list', auth, isAdmin, studentController.getAllStudents);
 router.get('/section/:section_id', auth, isAdmin, studentController.getStudentsBySection);
 router.patch('/:id/status', auth, isAdmin, studentController.updateStudentStatus);
+
+// Protected routes - Instructor only
+router.get('/instructor-enrolled', auth, isInstructor, studentController.getStudentsForInstructor);
 
 module.exports = router;

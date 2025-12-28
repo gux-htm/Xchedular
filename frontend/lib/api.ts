@@ -94,6 +94,11 @@ export const adminAPI = {
   getInstructors: () => api.get('/admin/instructors'),
 };
 
+// Student APIs
+export const studentAPI = {
+  getEnrolledStudents: () => api.get('/students/instructor-enrolled'),
+};
+
 // Room Assignment APIs
 export const roomAPI = {
   autoAssign: (data: any) => api.post('/rooms/auto-assign', data),

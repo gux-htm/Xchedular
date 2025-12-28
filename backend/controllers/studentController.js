@@ -406,3 +406,35 @@ exports.updateStudentStatus = async (req, res) => {
     res.status(500).json({ error: 'Failed to update student status' });
   }
 };
+
+// Get students enrolled in courses taught by the instructor
+exports.getStudentsForInstructor = async (req, res) => {
+  const instructorId = req.user.id;
+
+  try {
+    // We join course_requests (accepted) to link instructor to sections and courses
+    // Then join students in those sections
+    const [students] = await db.query(
+      `SELECT DISTINCT
+          st.id,
+          st.name,
+          st.roll_number,
+          st.email,
+          sec.name as section_name,
+          c.name as course_name,
+          c.code as course_code
+       FROM students st
+       JOIN sections sec ON st.section_id = sec.id
+       JOIN course_requests cr ON cr.section_id = sec.id
+       JOIN courses c ON cr.course_id = c.id
+       WHERE cr.instructor_id = ? AND cr.status = 'accepted'
+       ORDER BY c.name, sec.name, st.roll_number`,
+      [instructorId]
+    );
+
+    res.json({ students });
+  } catch (error) {
+    console.error('Get instructor students error:', error);
+    res.status(500).json({ error: 'Failed to fetch enrolled students' });
+  }
+};

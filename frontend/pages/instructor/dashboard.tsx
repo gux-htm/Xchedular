@@ -1,11 +1,14 @@
+
 import { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/router';
-import { timetableAPI } from '@/lib/api';
+import { timetableAPI, studentAPI } from '@/lib/api';
 import { motion } from 'framer-motion';
-import { Book, Calendar, Clock } from 'lucide-react';
+import { Book, Calendar, Clock, Users, Hash, Mail, User } from 'lucide-react';
 import Link from 'next/link';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const MotionDiv = motion.div as any;
 
@@ -17,6 +20,7 @@ export default function InstructorDashboard() {
     acceptedCourses: 0,
     totalClasses: 0,
   });
+  const [enrolledStudents, setEnrolledStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,15 +33,16 @@ export default function InstructorDashboard() {
       return;
     }
 
-    loadStats();
+    loadDashboardData();
   }, [authLoading, isInstructor, user, router]);
 
-  const loadStats = async () => {
+  const loadDashboardData = async () => {
     try {
-      const [pendingRes, acceptedRes, timetableRes] = await Promise.all([
+      const [pendingRes, acceptedRes, timetableRes, studentsRes] = await Promise.all([
         timetableAPI.getCourseRequests({ status: 'pending' }),
         timetableAPI.getCourseRequests({ status: 'accepted', instructor_id: user?.id }),
         timetableAPI.getTimetable({ teacher_id: user?.id }),
+        studentAPI.getEnrolledStudents(),
       ]);
 
       setStats({
@@ -45,8 +50,10 @@ export default function InstructorDashboard() {
         acceptedCourses: acceptedRes.data.requests.length,
         totalClasses: timetableRes.data.timetable.length,
       });
+
+      setEnrolledStudents(studentsRes.data.students || []);
     } catch (error) {
-      console.error('Failed to load stats:', error);
+      console.error('Failed to load dashboard data:', error);
     } finally {
       setLoading(false);
     }
@@ -143,13 +150,79 @@ export default function InstructorDashboard() {
           </Link>
         </div>
 
-        {/* Info Card */}
-        <div className="card bg-gradient-to-r from-purple-500 to-indigo-600 text-white">
-          <h3 className="text-xl font-bold mb-2">Welcome to EmersonSched!</h3>
-          <p className="text-purple-100">
-            Manage your course assignments, set your availability preferences, and view your teaching schedule all in one place.
-          </p>
-        </div>
+        {/* Enrolled Students Section */}
+        <MotionDiv
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Users className="h-5 w-5 text-primary" />
+                <span>Enrolled Students</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {enrolledStudents.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Users className="h-12 w-12 mx-auto mb-2 opacity-20" />
+                  <p>No students found enrolled in your courses.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto max-h-[400px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[120px]">
+                          <div className="flex items-center space-x-1">
+                             <Hash className="w-3 h-3" />
+                             <span>Roll No</span>
+                          </div>
+                        </TableHead>
+                        <TableHead>
+                          <div className="flex items-center space-x-1">
+                             <User className="w-3 h-3" />
+                             <span>Name</span>
+                          </div>
+                        </TableHead>
+                        <TableHead>
+                          <div className="flex items-center space-x-1">
+                             <Book className="w-3 h-3" />
+                             <span>Course</span>
+                          </div>
+                        </TableHead>
+                        <TableHead>
+                          <div className="flex items-center space-x-1">
+                             <Users className="w-3 h-3" />
+                             <span>Section</span>
+                          </div>
+                        </TableHead>
+                        <TableHead>
+                          <div className="flex items-center space-x-1">
+                             <Mail className="w-3 h-3" />
+                             <span>Email</span>
+                          </div>
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {enrolledStudents.map((student) => (
+                        <TableRow key={`${student.id}-${student.course_code}`}>
+                          <TableCell className="font-mono">{student.roll_number}</TableCell>
+                          <TableCell className="font-medium">{student.name}</TableCell>
+                          <TableCell>{student.course_name} <span className="text-xs text-muted-foreground">({student.course_code})</span></TableCell>
+                          <TableCell>{student.section_name}</TableCell>
+                          <TableCell className="text-muted-foreground text-sm">{student.email}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </MotionDiv>
       </div>
     </Layout>
   );
